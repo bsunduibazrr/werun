@@ -5,7 +5,7 @@ import { TbTrash } from "react-icons/tb";
 
 const STORAGE_KEY = "werun-stopwatch-state-v1";
 const DISPLAY_INTERVAL_MS = 43;
-const DEFAULT_LAP_COMMENT = "❌";
+const DEFAULT_LAP_COMMENT = "X";
 
 function defaultState() {
   return {
@@ -512,7 +512,7 @@ export default function StopwatchPage() {
                           className="lap-comment-input"
                           type="text"
                           value={lap.comment ?? DEFAULT_LAP_COMMENT}
-                          placeholder={DEFAULT_LAP_COMMENT}
+                          placeholder={"Comment"}
                           onChange={(event) =>
                             updateLapComment(lap.index, event.target.value)
                           }
