@@ -15,9 +15,7 @@ function defaultState() {
 }
 
 function formatTime(ms) {
-  const totalCentiseconds = Math.max(0, Math.floor(ms / 10));
-  const centiseconds = totalCentiseconds % 100;
-  const totalSeconds = Math.floor(totalCentiseconds / 100);
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const seconds = totalSeconds % 60;
   const totalMinutes = Math.floor(totalSeconds / 60);
   const minutes = totalMinutes % 60;
@@ -26,9 +24,24 @@ function formatTime(ms) {
   const hh = String(hours).padStart(2, "0");
   const mm = String(minutes).padStart(2, "0");
   const ss = String(seconds).padStart(2, "0");
-  const cc = String(centiseconds).padStart(2, "0");
 
-  return hours > 0 ? `${hh}:${mm}:${ss}.${cc}` : `${mm}:${ss}.${cc}`;
+  return `${hh}:${mm}:${ss}`;
+}
+
+function formatRecordedAt(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function getTimeParts(ms) {
+  const [hours, minutes, seconds] = formatTime(ms).split(":");
+  return { hours, minutes, seconds };
 }
 
 function getElapsedTime(state, now = Date.now()) {
@@ -96,6 +109,9 @@ export default function StopwatchPage() {
   const wakeLockRef = useRef(null);
 
   const elapsed = getElapsedTime(appState);
+  const timeParts = getTimeParts(elapsed);
+  const showPrestartLap = !appState.isRunning && elapsed === 0;
+  const showResetButton = appState.isRunning || elapsed > 0;
 
   useEffect(() => {
     const restored = loadState();
@@ -223,11 +239,7 @@ export default function StopwatchPage() {
             index: current.laps.length + 1,
             elapsedMs,
             splitMs,
-            recordedAtLabel: recordedAt.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            }),
+            recordedAtLabel: formatRecordedAt(recordedAt),
           },
         ],
       };
@@ -328,32 +340,56 @@ export default function StopwatchPage() {
             <span className="display-label">Elapsed time</span>
             <span className="status-display">{stopwatchStatus}</span>
           </div>
-          <span className="time-display">{formatTime(elapsed)}</span>
+          <div className="time-display" role="presentation">
+            <div className="time-group">
+              <span className="time-unit-label">hour</span>
+              <span className="time-unit-value">{timeParts.hours}</span>
+            </div>
+            <span className="time-separator">:</span>
+            <div className="time-group">
+              <span className="time-unit-label">minute</span>
+              <span className="time-unit-value">{timeParts.minutes}</span>
+            </div>
+            <span className="time-separator">:</span>
+            <div className="time-group">
+              <span className="time-unit-label">second</span>
+              <span className="time-unit-value">{timeParts.seconds}</span>
+            </div>
+          </div>
         </div>
 
         <div className="controls" role="group" aria-label="Stopwatch controls">
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={appState.isRunning ? pauseStopwatch : startStopwatch}
-          >
-            {appState.isRunning ? "Pause" : "Start"}
-          </button>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            onClick={addLap}
-            disabled={!appState.isRunning}
-          >
-            Lap
-          </button>
-          <button
-            className="btn btn-ghost"
-            type="button"
-            onClick={resetStopwatch}
-          >
-            Reset
-          </button>
+          {appState.isRunning ? (
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={addLap}
+            >
+              Lap
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={startStopwatch}
+            >
+              Start
+            </button>
+          )}
+          {showResetButton && (
+            <div
+              className={`control-pair ${appState.isRunning ? "control-pair-grow" : ""}`}
+            >
+              <button
+                className={`btn btn-ghost ${appState.isRunning ? "btn-fill" : ""}`}
+                type="button"
+                style={{ width: "170%" }}
+                onClick={resetStopwatch}
+              >
+                Reset
+              </button>
+            </div>
+          )}
         </div>
 
         <div
@@ -368,20 +404,21 @@ export default function StopwatchPage() {
           >
             {wakeLockActive ? "Screen Awake On" : "Keep Screen Awake"}
           </button>
-          <div
-            className="export-actions"
-            role="group"
-            aria-label="Export controls"
+        </div>
+
+        <div
+          className="export-actions"
+          role="group"
+          aria-label="Export controls"
+        >
+          <button
+            className="btn btn-accent"
+            type="button"
+            onClick={exportCsv}
+            disabled={!appState.laps.length}
           >
-            <button
-              className="btn btn-accent"
-              type="button"
-              onClick={exportCsv}
-              disabled={!appState.laps.length}
-            >
-              Export CSV
-            </button>
-          </div>
+            Export Result
+          </button>
         </div>
       </section>
 
@@ -389,7 +426,7 @@ export default function StopwatchPage() {
         <div className="laps-header">
           <div>
             <p className="eyebrow">Session Laps</p>
-            <h2>Official split log</h2>
+            <h2> Split logs</h2>
           </div>
           <span className="lap-count">{appState.laps.length} laps</span>
         </div>
@@ -402,16 +439,18 @@ export default function StopwatchPage() {
                 .reverse()
                 .map((lap) => (
                   <li className="lap-item" key={lap.index}>
-                    <span className="lap-label">Lap {lap.index}</span>
+                    <span className="lap-label">Lap: {lap.index}</span>
                     <div>
-                      <div className="lap-total">
-                        {formatTime(lap.elapsedMs)}
+                      <div className="lap-meta">
+                        Total: {formatTime(lap.elapsedMs)}
                       </div>
                       <div className="lap-meta">
-                        Split {formatTime(lap.splitMs)}
+                        Split: {formatTime(lap.splitMs)}
                       </div>
+                      <span className="lap-split">
+                        Date: {lap.recordedAtLabel}
+                      </span>{" "}
                     </div>
-                    <span className="lap-split">{lap.recordedAtLabel}</span>
                   </li>
                 ))}
             </ol>

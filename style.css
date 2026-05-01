@@ -195,11 +195,27 @@ h2 {
   margin-top: 16px;
 }
 
+.control-pair {
+  display: flex;
+  gap: 12px;
+}
+
+.control-pair-grow {
+  flex: 1 1 0;
+}
+
+.control-pair-full {
+  width: 100%;
+}
+
+.btn-fill {
+  flex: 1 1 0;
+}
+
 .btn {
   border: 1px solid transparent;
   border-radius: 999px;
-  height: 50px;
-  padding: 13px 18px;
+  height: 30px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -376,6 +392,11 @@ body.fullscreen-active .app-shell {
   .export-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .control-pair-full,
+  .control-pair-grow {
+    grid-column: 1 / -1;
   }
 
   .controls .btn:first-child,
