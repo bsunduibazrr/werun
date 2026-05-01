@@ -1,12 +1,11 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "WeRun Official Stopwatch",
-  description:
-    "Official WeRun stopwatch for event timing, lap recording, and export.",
+  title: "Werun Stopwatch",
+  description: "Werun Stopwatch",
   manifest: "/app.webmanifest",
   icons: {
-    icon: "/assets/icon.svg",
+    icon: "/assets/logo.png",
   },
 };
 

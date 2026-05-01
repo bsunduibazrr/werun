@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TbTrash } from "react-icons/tb";
 
 const STORAGE_KEY = "werun-stopwatch-state-v1";
 const DISPLAY_INTERVAL_MS = 43;
+const DEFAULT_LAP_COMMENT = "❌";
 
 function defaultState() {
   return {
@@ -52,6 +54,11 @@ function getElapsedTime(state, now = Date.now()) {
   return state.elapsedBeforeStartMs + (now - state.startedAtEpochMs);
 }
 
+function normalizeLapComment(comment) {
+  const trimmedComment = String(comment ?? "").trim();
+  return trimmedComment || DEFAULT_LAP_COMMENT;
+}
+
 function loadState() {
   if (typeof window === "undefined") {
     return defaultState();
@@ -67,7 +74,13 @@ function loadState() {
     return {
       ...defaultState(),
       ...parsed,
-      laps: Array.isArray(parsed.laps) ? parsed.laps : [],
+      laps: Array.isArray(parsed.laps)
+        ? parsed.laps.map((lap, index) => ({
+            ...lap,
+            index: index + 1,
+            comment: normalizeLapComment(lap.comment),
+          }))
+        : [],
     };
   } catch {
     return defaultState();
@@ -240,6 +253,7 @@ export default function StopwatchPage() {
             elapsedMs,
             splitMs,
             recordedAtLabel: formatRecordedAt(recordedAt),
+            comment: DEFAULT_LAP_COMMENT,
           },
         ],
       };
@@ -247,14 +261,48 @@ export default function StopwatchPage() {
     setStatusMessage("Lap added to official log");
   }
 
+  function updateLapComment(lapIndex, nextComment) {
+    setAppState((current) => ({
+      ...current,
+      laps: current.laps.map((lap) =>
+        lap.index === lapIndex ? { ...lap, comment: nextComment } : lap,
+      ),
+    }));
+  }
+
+  function finalizeLapComment(lapIndex) {
+    setAppState((current) => ({
+      ...current,
+      laps: current.laps.map((lap) =>
+        lap.index === lapIndex
+          ? { ...lap, comment: normalizeLapComment(lap.comment) }
+          : lap,
+      ),
+    }));
+  }
+
+  function removeLap(lapIndex) {
+    setAppState((current) => ({
+      ...current,
+      laps: current.laps
+        .filter((lap) => lap.index !== lapIndex)
+        .map((lap, index) => ({
+          ...lap,
+          index: index + 1,
+        })),
+    }));
+    setStatusMessage(`Lap ${lapIndex} removed from official log`);
+  }
+
   function exportCsv() {
-    const header = "lap,total_time,split_time,recorded_at";
+    const header = "lap,total_time,split_time,recorded_at,comment";
     const rows = appState.laps.map((lap) =>
       [
         lap.index,
         formatTime(lap.elapsedMs),
         formatTime(lap.splitMs),
         lap.recordedAtLabel,
+        normalizeLapComment(lap.comment),
       ]
         .map(escapeCsvValue)
         .join(","),
@@ -274,7 +322,13 @@ export default function StopwatchPage() {
         {
           exportedAt: new Date().toISOString(),
           totalElapsedMs: Math.round(elapsed),
-          state: appState,
+          state: {
+            ...appState,
+            laps: appState.laps.map((lap) => ({
+              ...lap,
+              comment: normalizeLapComment(lap.comment),
+            })),
+          },
         },
         null,
         2,
@@ -383,7 +437,7 @@ export default function StopwatchPage() {
               <button
                 className={`btn btn-ghost ${appState.isRunning ? "btn-fill" : ""}`}
                 type="button"
-                style={{ width: "170%" }}
+                style={{ width: "190%" }}
                 onClick={resetStopwatch}
               >
                 Reset
@@ -439,8 +493,8 @@ export default function StopwatchPage() {
                 .reverse()
                 .map((lap) => (
                   <li className="lap-item" key={lap.index}>
-                    <span className="lap-label">Lap: {lap.index}</span>
-                    <div>
+                    <div className="lap-main">
+                      <span className="lap-label">Lap: {lap.index}</span>
                       <div className="lap-meta">
                         Total: {formatTime(lap.elapsedMs)}
                       </div>
@@ -449,7 +503,31 @@ export default function StopwatchPage() {
                       </div>
                       <span className="lap-split">
                         Date: {lap.recordedAtLabel}
-                      </span>{" "}
+                      </span>
+                    </div>
+                    <div className="lap-actions">
+                      <label className="lap-comment-field">
+                        <span className="sr-only">Lap {lap.index} comment</span>
+                        <input
+                          className="lap-comment-input"
+                          type="text"
+                          value={lap.comment ?? DEFAULT_LAP_COMMENT}
+                          placeholder={DEFAULT_LAP_COMMENT}
+                          onChange={(event) =>
+                            updateLapComment(lap.index, event.target.value)
+                          }
+                          onBlur={() => finalizeLapComment(lap.index)}
+                        />
+                      </label>
+                      <button
+                        className="btn btn-danger lap-remove-btn"
+                        type="button"
+                        aria-label={`Remove lap ${lap.index}`}
+                        title="Remove lap"
+                        onClick={() => removeLap(lap.index)}
+                      >
+                        <TbTrash />
+                      </button>
                     </div>
                   </li>
                 ))}

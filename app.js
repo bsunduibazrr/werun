@@ -1,5 +1,6 @@
 const STORAGE_KEY = "werun-stopwatch-state-v1";
 const DISPLAY_INTERVAL_MS = 43;
+const DEFAULT_LAP_COMMENT = "❌";
 
 const timeDisplay = document.getElementById("time-display");
 const statusDisplay = document.getElementById("status-display");
@@ -31,6 +32,11 @@ function defaultState() {
   };
 }
 
+function normalizeLapComment(comment) {
+  const trimmedComment = String(comment ?? "").trim();
+  return trimmedComment || DEFAULT_LAP_COMMENT;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -42,7 +48,13 @@ function loadState() {
     return {
       ...defaultState(),
       ...parsed,
-      laps: Array.isArray(parsed.laps) ? parsed.laps : [],
+      laps: Array.isArray(parsed.laps)
+        ? parsed.laps.map((lap, index) => ({
+            ...lap,
+            index: index + 1,
+            comment: normalizeLapComment(lap.comment),
+          }))
+        : [],
     };
   } catch (error) {
     return defaultState();
@@ -132,13 +144,36 @@ function renderLaps() {
       const lapItem = document.createElement("li");
       lapItem.className = "lap-item";
       lapItem.innerHTML = `
-        <span class="lap-label">Lap ${lap.index}</span>
-        <div>
+        <div class="lap-main">
+          <span class="lap-label">Lap ${lap.index}</span>
           <div class="lap-total">${formatTime(lap.elapsedMs)}</div>
           <div class="lap-meta">Split ${formatTime(lap.splitMs)}</div>
+          <div class="lap-meta">Date ${lap.recordedAtLabel}</div>
         </div>
-        <span class="lap-split">${lap.recordedAtLabel}</span>
+        <div class="lap-actions">
+          <label class="lap-comment-field">
+            <span class="sr-only">Lap ${lap.index} comment</span>
+            <input class="lap-comment-input" type="text" value="${escapeHtml(
+              lap.comment ?? DEFAULT_LAP_COMMENT,
+            )}" placeholder="${DEFAULT_LAP_COMMENT}" />
+          </label>
+          <button class="btn btn-danger lap-remove-btn" type="button" aria-label="Remove lap ${lap.index}" title="Remove lap">
+            🗑️
+          </button>
+        </div>
       `;
+      const commentInput = lapItem.querySelector(".lap-comment-input");
+      const removeButton = lapItem.querySelector(".lap-remove-btn");
+
+      commentInput.addEventListener("input", (event) => {
+        updateLapComment(lap.index, event.target.value);
+      });
+      commentInput.addEventListener("blur", () => {
+        finalizeLapComment(lap.index);
+      });
+      removeButton.addEventListener("click", () => {
+        removeLap(lap.index);
+      });
       lapList.appendChild(lapItem);
     });
 }
@@ -196,6 +231,7 @@ function addLap() {
       minute: "2-digit",
       second: "2-digit",
     }),
+    comment: DEFAULT_LAP_COMMENT,
   });
 
   persistState();
@@ -213,6 +249,44 @@ function escapeCsvValue(value) {
   return stringValue;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function updateLapComment(lapIndex, nextComment) {
+  state.laps = state.laps.map((lap) =>
+    lap.index === lapIndex ? { ...lap, comment: nextComment } : lap,
+  );
+  persistState();
+}
+
+function finalizeLapComment(lapIndex) {
+  state.laps = state.laps.map((lap) =>
+    lap.index === lapIndex
+      ? { ...lap, comment: normalizeLapComment(lap.comment) }
+      : lap,
+  );
+  persistState();
+  renderLaps();
+}
+
+function removeLap(lapIndex) {
+  state.laps = state.laps
+    .filter((lap) => lap.index !== lapIndex)
+    .map((lap, index) => ({
+      ...lap,
+      index: index + 1,
+    }));
+  persistState();
+  renderLaps();
+  refreshButtons();
+  updateRestoreBadge(`Lap ${lapIndex} removed from official log`);
+}
+
 function downloadFile(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -224,13 +298,14 @@ function downloadFile(filename, content, mimeType) {
 }
 
 function exportCsv() {
-  const header = "lap,total_time,split_time,recorded_at";
+  const header = "lap,total_time,split_time,recorded_at,comment";
   const rows = state.laps.map((lap) =>
     [
       lap.index,
       formatTime(lap.elapsedMs),
       formatTime(lap.splitMs),
       lap.recordedAtLabel,
+      normalizeLapComment(lap.comment),
     ]
       .map(escapeCsvValue)
       .join(","),
@@ -247,7 +322,13 @@ function exportJson() {
   const payload = {
     exportedAt: new Date().toISOString(),
     totalElapsedMs: Math.round(getElapsedTime()),
-    state,
+    state: {
+      ...state,
+      laps: state.laps.map((lap) => ({
+        ...lap,
+        comment: normalizeLapComment(lap.comment),
+      })),
+    },
   };
 
   downloadFile(
