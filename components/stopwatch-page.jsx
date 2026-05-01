@@ -511,7 +511,7 @@ export default function StopwatchPage() {
                         <input
                           className="lap-comment-input"
                           type="text"
-                          value={lap.comment ?? DEFAULT_LAP_COMMENT}
+                          value={lap.comment ?? ""}
                           placeholder={"Comment"}
                           onChange={(event) =>
                             updateLapComment(lap.index, event.target.value)
