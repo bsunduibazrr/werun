@@ -1,0 +1,17 @@
+{
+  "name": "WeRun Official Stopwatch",
+  "short_name": "WeRun Timer",
+  "description": "Official WeRun stopwatch for event timing, lap recording, and offline use.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2fcfb",
+  "theme_color": "#11aca5",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#11aca5" />
+    <meta
+      name="description"
+      content="Official WeRun stopwatch for events, lap timing, and offline timing operations."
+    />
+    <title>WeRun Official Stopwatch</title>
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./app.webmanifest" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero-card">
+        <header class="brand-header">
+          <img
+            class="brand-logo"
+            src="./assets/logo.png"
+            alt="WeRun logo"
+            width="220"
+            height="66"
+          />
+          <div class="brand-copy">
+            <p class="eyebrow">Official Timinhuhpjg Console</p>
+            <p>test</p>
+            <h1>
+              Event stopwatch fgirehfoerhferibuilt for dependable live use
+            </h1>
+            <p class="intro">
+              Lap timing, offline support, session recovery, and export tools
+              for formal WeRun activities.
+            </p>
+          </div>
+        </header>
+
+        <div class="display-panel" aria-live="polite">
+          <div class="display-topline">
+            <span class="display-label">Elapseeulhelnled time</span>
+            <span id="status-display" class="status-display">Ready</span>
+          </div>
+          <span id="time-display" class="time-display">00:00.00</span>
+          <div class="display-meta">
+            <span id="offline-badge" class="meta-badge"
+              >Checking connectivity</span
+            >
+            <span id="restore-badge" class="meta-badge meta-badge-soft"
+              >Session persistence enabled</span
+            >
+          </div>
+        </div>
+
+        <div class="controls" role="group" aria-label="Stopwatch controls">
+          <button id="start-pause-btn" class="btn btn-primary" type="button">
+            Start
+          </button>
+          <button id="lap-btn" class="btn btn-secondary" type="button" disabled>
+            Lap
+          </button>
+          <button id="reset-btn" class="btn btn-ghost" type="button">
+            Reset
+          </button>
+        </div>
+
+        <div class="utility-actions" role="group" aria-label="Display controls">
+          <button id="wake-lock-btn" class="btn btn-utility" type="button">
+            Keep Screen Awake
+          </button>
+        </div>
+
+        <div class="export-actions" role="group" aria-label="Export controls">
+          <button
+            id="export-csv-btn"
+            class="btn btn-accent"
+            type="button"
+            disabled
+          >
+            Export CSV
+          </button>
+        </div>
+      </section>
+
+      <section class="laps-card">
+        <div class="laps-header">
+          <div>
+            <p class="eyebrow">Session Laps</p>
+            <h2>Official split log</h2>
+          </div>
+          <span id="lap-count" class="lap-count">0 laps</span>
+        </div>
+
+        <div class="reliability-list">
+          <span class="reliability-item">Offline-ready</span>
+          <span class="reliability-item">Auto-restore</span>
+          <span class="reliability-item">Exportable records</span>
+        </div>
+
+        <div class="lap-list-wrap">
+          <ol id="lap-list" class="lap-list"></ol>
+          <p id="empty-state" class="empty-state">
+            Start the stopwatch and press Lap to create an official session
+            split record.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
