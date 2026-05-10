@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MdDarkMode, MdLightMode } from "react-icons/md";
 import { TbTrash } from "react-icons/tb";
 
 const STORAGE_KEY = "werun-stopwatch-state-v1";
@@ -458,7 +459,9 @@ export default function StopwatchPage() {
         <header className="brand-header">
           <img
             className="brand-logo"
-            src={theme === "dark" ? "/assets/logo-dark.png" : "/assets/logo.png"}
+            src={
+              theme === "dark" ? "/assets/logo-dark.png" : "/assets/logo.png"
+            }
             alt="WeRun logo"
             width="220"
             height="66"
@@ -531,8 +534,10 @@ export default function StopwatchPage() {
             className="btn btn-utility"
             type="button"
             onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            {theme === "dark" ? <MdLightMode /> : <MdDarkMode />}
           </button>
           <button
             className="btn btn-utility"
