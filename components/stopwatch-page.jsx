@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MdDarkMode, MdLightMode } from "react-icons/md";
+import {
+  MdArrowUpward,
+  MdDarkMode,
+  MdLightMode,
+  MdSearch,
+} from "react-icons/md";
 import { TbTrash } from "react-icons/tb";
 
 const STORAGE_KEY = "werun-stopwatch-state-v1";
@@ -238,6 +243,17 @@ export default function StopwatchPage() {
       ? "Paused"
       : "Ready";
 
+  function triggerVibration(pattern) {
+    if (
+      typeof navigator === "undefined" ||
+      typeof navigator.vibrate !== "function"
+    ) {
+      return;
+    }
+
+    navigator.vibrate(pattern);
+  }
+
   function startStopwatch() {
     setAppState((current) => ({
       ...current,
@@ -285,6 +301,7 @@ export default function StopwatchPage() {
         ],
       };
     });
+    triggerVibration(35);
     setStatusMessage("Lap added to official log");
   }
 
@@ -321,7 +338,8 @@ export default function StopwatchPage() {
     setStatusMessage(`Lap ${lapIndex} removed from official log`);
   }
 
-  function scrollToLapByIndex(lapIndex) {
+  function scrollToLapByIndex(lapIndex, options = {}) {
+    const { dismissKeyboard = false } = options;
     const nextLapIndex = Number.parseInt(String(lapIndex), 10);
 
     if (!Number.isInteger(nextLapIndex) || nextLapIndex < 1) {
@@ -341,10 +359,16 @@ export default function StopwatchPage() {
       return;
     }
 
-    targetLap.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
+    if (dismissKeyboard && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    window.setTimeout(() => {
+      targetLap.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, dismissKeyboard ? 180 : 0);
 
     setActiveLapSearch(nextLapIndex);
     setStatusMessage(`Scrolled to lap ${nextLapIndex}`);
@@ -358,13 +382,16 @@ export default function StopwatchPage() {
     }, 1800);
   }
 
-  function handleLapSearchKeyDown(event) {
-    if (event.key !== "Enter") {
-      return;
-    }
-
+  function handleLapSearchSubmit(event) {
     event.preventDefault();
-    scrollToLapByIndex(lapSearchValue);
+    scrollToLapByIndex(lapSearchValue, { dismissKeyboard: true });
+  }
+
+  function scrollToTop() {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function exportCsv() {
@@ -525,28 +552,39 @@ export default function StopwatchPage() {
           )}
         </div>
 
-        <div
-          className="utility-actions"
-          role="group"
-          aria-label="Display controls"
-        >
-          <button
-            className="btn btn-utility"
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        {hydrated && (
+          <div
+            className="utility-actions"
+            role="group"
+            aria-label="Display controls"
           >
-            {theme === "dark" ? <MdLightMode /> : <MdDarkMode />}
-          </button>
-          <button
-            className="btn btn-utility"
-            type="button"
-            onClick={toggleWakeLock}
-          >
-            {wakeLockActive ? "Screen Awake On" : "Keep Screen Awake"}
-          </button>
-        </div>
+            <button
+              className="btn btn-utility"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              title={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+            >
+              {theme === "dark" ? <MdLightMode /> : <MdDarkMode />}
+            </button>
+
+            <button
+              className="btn btn-utility"
+              type="button"
+              onClick={toggleWakeLock}
+            >
+              {wakeLockActive ? "Screen Awake On" : "Keep Screen Awake"}
+            </button>
+          </div>
+        )}
 
         <div
           className="export-actions"
@@ -571,21 +609,40 @@ export default function StopwatchPage() {
             <h2> Split logs</h2>
           </div>
           <div className="laps-header-actions">
-            <label className="lap-search-field">
-              <span className="sr-only">Search lap number</span>
-              <input
-                className="lap-search-input"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={lapSearchValue}
-                placeholder="Go to lap #"
-                onChange={(event) =>
-                  setLapSearchValue(event.target.value.replace(/\D/g, ""))
-                }
-                onKeyDown={handleLapSearchKeyDown}
-              />
-            </label>
+            <form className="lap-search-form" onSubmit={handleLapSearchSubmit}>
+              <label className="lap-search-field">
+                <span className="sr-only">Search lap number</span>
+                <input
+                  className="lap-search-input"
+                  type="search"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  enterKeyHint="search"
+                  value={lapSearchValue}
+                  placeholder="Go to lap #"
+                  onChange={(event) =>
+                    setLapSearchValue(event.target.value.replace(/\D/g, ""))
+                  }
+                />
+              </label>
+              <button
+                className="btn btn-utility icon-btn"
+                type="submit"
+                aria-label="Go to lap"
+                title="Go to lap"
+              >
+                <MdSearch />
+              </button>
+            </form>
+            <button
+              className="btn btn-utility icon-btn"
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Scroll to top"
+              title="Scroll to top"
+            >
+              <MdArrowUpward />
+            </button>
             <span className="lap-count">{appState.laps.length} laps</span>
           </div>
         </div>

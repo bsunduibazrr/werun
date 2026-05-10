@@ -324,6 +324,14 @@ h2 {
   width: min(100%, 360px);
 }
 
+.lap-search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .lap-search-field {
   flex: 1 1 auto;
 }
@@ -354,6 +362,18 @@ h2 {
   color: var(--text-soft);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.icon-btn {
+  min-width: 48px;
+  width: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+  flex: 0 0 48px;
 }
 
 .reliability-list {
@@ -398,6 +418,7 @@ h2 {
   border-radius: var(--radius-md);
   background: var(--surface-strong);
   border: 1px solid var(--line);
+  scroll-margin-top: 20px;
 }
 
 .lap-item-active {
@@ -604,6 +625,11 @@ h2 {
 
   .laps-header-actions {
     width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .lap-count {
+    width: 100%;
   }
 }
 
@@ -702,5 +728,17 @@ h2 {
   .utility-actions .btn,
   .export-actions .btn {
     width: 100%;
+  }
+
+  .laps-header-actions {
+    gap: 10px;
+  }
+
+  .lap-search-form {
+    width: 100%;
+  }
+
+  .lap-count {
+    width: auto;
   }
 }
