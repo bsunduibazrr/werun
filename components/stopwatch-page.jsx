@@ -109,6 +109,8 @@ function downloadFile(filename, content, mimeType) {
 export default function StopwatchPage() {
   const [appState, setAppState] = useState(defaultState);
   const [hydrated, setHydrated] = useState(false);
+  const [lapSearchValue, setLapSearchValue] = useState("");
+  const [activeLapSearch, setActiveLapSearch] = useState(null);
   const [statusMessage, setStatusMessage] = useState(
     "Session persistence enabled",
   );
@@ -120,6 +122,8 @@ export default function StopwatchPage() {
 
   const intervalRef = useRef(null);
   const wakeLockRef = useRef(null);
+  const lapItemRefs = useRef({});
+  const lapHighlightTimeoutRef = useRef(null);
 
   const elapsed = getElapsedTime(appState);
   const timeParts = getTimeParts(elapsed);
@@ -163,6 +167,14 @@ export default function StopwatchPage() {
       }
     };
   }, [appState.isRunning, hydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (lapHighlightTimeoutRef.current) {
+        window.clearTimeout(lapHighlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!hydrated) {
@@ -292,6 +304,52 @@ export default function StopwatchPage() {
         })),
     }));
     setStatusMessage(`Lap ${lapIndex} removed from official log`);
+  }
+
+  function scrollToLapByIndex(lapIndex) {
+    const nextLapIndex = Number.parseInt(String(lapIndex), 10);
+
+    if (!Number.isInteger(nextLapIndex) || nextLapIndex < 1) {
+      setStatusMessage("Enter a valid lap number");
+      return;
+    }
+
+    const lapExists = appState.laps.some((lap) => lap.index === nextLapIndex);
+    if (!lapExists) {
+      setStatusMessage(`Lap ${nextLapIndex} not found`);
+      return;
+    }
+
+    const targetLap = lapItemRefs.current[nextLapIndex];
+    if (!targetLap) {
+      setStatusMessage(`Lap ${nextLapIndex} is not ready yet`);
+      return;
+    }
+
+    targetLap.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    setActiveLapSearch(nextLapIndex);
+    setStatusMessage(`Scrolled to lap ${nextLapIndex}`);
+
+    if (lapHighlightTimeoutRef.current) {
+      window.clearTimeout(lapHighlightTimeoutRef.current);
+    }
+
+    lapHighlightTimeoutRef.current = window.setTimeout(() => {
+      setActiveLapSearch(null);
+    }, 1800);
+  }
+
+  function handleLapSearchKeyDown(event) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    scrollToLapByIndex(lapSearchValue);
   }
 
   function exportCsv() {
@@ -482,7 +540,24 @@ export default function StopwatchPage() {
             <p className="eyebrow">Session Laps</p>
             <h2> Split logs</h2>
           </div>
-          <span className="lap-count">{appState.laps.length} laps</span>
+          <div className="laps-header-actions">
+            <label className="lap-search-field">
+              <span className="sr-only">Search lap number</span>
+              <input
+                className="lap-search-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={lapSearchValue}
+                placeholder="Go to lap #"
+                onChange={(event) =>
+                  setLapSearchValue(event.target.value.replace(/\D/g, ""))
+                }
+                onKeyDown={handleLapSearchKeyDown}
+              />
+            </label>
+            <span className="lap-count">{appState.laps.length} laps</span>
+          </div>
         </div>
 
         <div className="lap-list-wrap">
@@ -492,7 +567,18 @@ export default function StopwatchPage() {
                 .slice()
                 .reverse()
                 .map((lap) => (
-                  <li className="lap-item" key={lap.index}>
+                  <li
+                    className={`lap-item ${activeLapSearch === lap.index ? "lap-item-active" : ""}`}
+                    key={lap.index}
+                    ref={(element) => {
+                      if (element) {
+                        lapItemRefs.current[lap.index] = element;
+                        return;
+                      }
+
+                      delete lapItemRefs.current[lap.index];
+                    }}
+                  >
                     <div className="lap-main">
                       <span className="lap-label">Lap: {lap.index}</span>
                       <div className="lap-meta">
