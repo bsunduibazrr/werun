@@ -20,6 +20,25 @@
   --radius-md: 14px;
 }
 
+[data-theme="dark"] {
+  --bg: #081716;
+  --bg-accent: #102827;
+  --surface: rgba(10, 24, 24, 0.82);
+  --surface-strong: #102322;
+  --surface-soft: #16302f;
+  --text-main: #e8fbf9;
+  --text-soft: #97bbb8;
+  --line: rgba(157, 213, 209, 0.14);
+  --line-strong: rgba(157, 213, 209, 0.24);
+  --primary: #39d2ca;
+  --primary-deep: #1cb6ae;
+  --secondary: #173433;
+  --accent: #1fc6be;
+  --accent-alt: #74d9d3;
+  --badge: #133231;
+  --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -38,6 +57,9 @@ body {
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 24%),
     radial-gradient(circle at bottom right, rgba(17, 172, 165, 0.16), transparent 30%),
     linear-gradient(180deg, var(--bg), var(--bg-accent));
+  transition:
+    background 180ms ease,
+    color 180ms ease;
 }
 
 button,
@@ -60,7 +82,7 @@ select {
 .hero-card,
 .laps-card {
   background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
   backdrop-filter: blur(12px);
@@ -195,7 +217,7 @@ h2 {
   min-height: 36px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #def8f6;
+  background: var(--secondary);
   color: var(--primary-deep);
   font-size: 0.9rem;
   font-weight: 700;
@@ -259,7 +281,7 @@ h2 {
 
 .btn-ghost,
 .btn-utility {
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-strong);
   color: var(--text-main);
   border-color: var(--line-strong);
 }
@@ -275,13 +297,13 @@ h2 {
 }
 
 .btn-danger {
-  background: #fff1f1;
+  background: color-mix(in srgb, #b42d2d 10%, var(--surface-strong));
   border-color: rgba(180, 45, 45, 0.14);
   color: #b42d2d;
 }
 
 .btn-danger:hover:enabled {
-  background: #ffdede;
+  background: color-mix(in srgb, #b42d2d 18%, var(--surface-strong));
 }
 
 .laps-header {
@@ -363,7 +385,7 @@ h2 {
   align-items: center;
   padding: 15px 16px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface-strong);
   border: 1px solid var(--line);
 }
 

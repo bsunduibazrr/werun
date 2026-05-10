@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { TbTrash } from "react-icons/tb";
 
 const STORAGE_KEY = "werun-stopwatch-state-v1";
+const THEME_STORAGE_KEY = "werun-theme-v1";
 const DISPLAY_INTERVAL_MS = 43;
 const DEFAULT_LAP_COMMENT = "X";
 
@@ -109,6 +110,7 @@ function downloadFile(filename, content, mimeType) {
 export default function StopwatchPage() {
   const [appState, setAppState] = useState(defaultState);
   const [hydrated, setHydrated] = useState(false);
+  const [theme, setTheme] = useState("light");
   const [lapSearchValue, setLapSearchValue] = useState("");
   const [activeLapSearch, setActiveLapSearch] = useState(null);
   const [statusMessage, setStatusMessage] = useState(
@@ -132,7 +134,9 @@ export default function StopwatchPage() {
 
   useEffect(() => {
     const restored = loadState();
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     setAppState(restored);
+    setTheme(savedTheme === "dark" ? "dark" : "light");
     setHydrated(true);
     setStatusMessage(
       restored.isRunning
@@ -148,6 +152,16 @@ export default function StopwatchPage() {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
   }, [appState, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [hydrated, theme]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -434,6 +448,10 @@ export default function StopwatchPage() {
     }
   }
 
+  function toggleTheme() {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  }
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -512,6 +530,13 @@ export default function StopwatchPage() {
           <button
             className="btn btn-utility"
             type="button"
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+          <button
+            className="btn btn-utility"
+            type="button"
             onClick={toggleWakeLock}
           >
             {wakeLockActive ? "Screen Awake On" : "Keep Screen Awake"}
@@ -567,6 +592,7 @@ export default function StopwatchPage() {
                 .slice()
                 .reverse()
                 .map((lap) => (
+                  // list helber ni end bgashu
                   <li
                     className={`lap-item ${activeLapSearch === lap.index ? "lap-item-active" : ""}`}
                     key={lap.index}
