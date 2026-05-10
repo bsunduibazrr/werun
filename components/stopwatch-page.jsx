@@ -634,15 +634,6 @@ export default function StopwatchPage() {
                 <MdSearch />
               </button>
             </form>
-            <button
-              className="btn btn-utility icon-btn"
-              type="button"
-              onClick={scrollToTop}
-              aria-label="Scroll to top"
-              title="Scroll to top"
-            >
-              <MdArrowUpward />
-            </button>
             <span className="lap-count">{appState.laps.length} laps</span>
           </div>
         </div>
@@ -714,6 +705,16 @@ export default function StopwatchPage() {
           )}
         </div>
       </section>
+
+      <button
+        className="btn btn-utility icon-btn scroll-top-fab"
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        title="Scroll to top"
+      >
+        <MdArrowUpward />
+      </button>
     </main>
   );
 }
