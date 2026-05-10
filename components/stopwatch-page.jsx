@@ -458,7 +458,7 @@ export default function StopwatchPage() {
         <header className="brand-header">
           <img
             className="brand-logo"
-            src="/assets/logo.png"
+            src={theme === "dark" ? "/assets/logo-dark.png" : "/assets/logo.png"}
             alt="WeRun logo"
             width="220"
             height="66"
