@@ -1,6 +1,8 @@
 :root {
   --bg: #f2fcfb;
   --bg-accent: #ddf6f5;
+  --bg-glow-top: rgba(255, 255, 255, 0.96);
+  --bg-glow-bottom: rgba(17, 172, 165, 0.16);
   --surface: rgba(255, 255, 255, 0.9);
   --surface-strong: #ffffff;
   --surface-soft: #f1fbfa;
@@ -23,6 +25,8 @@
 [data-theme="dark"] {
   --bg: #081716;
   --bg-accent: #102827;
+  --bg-glow-top: rgba(12, 32, 31, 0.16);
+  --bg-glow-bottom: rgba(31, 198, 190, 0.08);
   --surface: rgba(10, 24, 24, 0.82);
   --surface-strong: #102322;
   --surface-soft: #16302f;
@@ -54,8 +58,8 @@ body {
     "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: var(--text-main);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(17, 172, 165, 0.16), transparent 30%),
+    radial-gradient(circle at top left, var(--bg-glow-top), transparent 24%),
+    radial-gradient(circle at bottom right, var(--bg-glow-bottom), transparent 30%),
     linear-gradient(180deg, var(--bg), var(--bg-accent));
   transition:
     background 180ms ease,
@@ -330,8 +334,15 @@ h2 {
   padding: 10px 12px;
   border: 1px solid var(--line-strong);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--surface-strong);
   color: var(--text-main);
+  -webkit-text-fill-color: var(--text-main);
+  caret-color: var(--text-main);
+}
+
+.lap-search-input::placeholder {
+  color: var(--text-soft);
+  opacity: 0.72;
 }
 
 .lap-search-input:focus {
@@ -442,8 +453,26 @@ h2 {
   padding: 10px 12px;
   border: 1px solid var(--line-strong);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--surface-strong);
   color: var(--text-main);
+  -webkit-text-fill-color: var(--text-main);
+  caret-color: var(--text-main);
+}
+
+.lap-comment-input::placeholder {
+  color: var(--text-soft);
+  opacity: 0.72;
+}
+
+.lap-search-input:-webkit-autofill,
+.lap-search-input:-webkit-autofill:hover,
+.lap-search-input:-webkit-autofill:focus,
+.lap-comment-input:-webkit-autofill,
+.lap-comment-input:-webkit-autofill:hover,
+.lap-comment-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-main);
+  box-shadow: 0 0 0 1000px var(--surface-strong) inset;
+  transition: background-color 9999s ease-out 0s;
 }
 
 .lap-comment-input:focus {
