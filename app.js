@@ -384,14 +384,7 @@ function renderExternalBrowserGate() {
         <img class="brand-logo" src="./assets/logo.png" alt="WeRun logo" width="220" height="66" />
         <h1>Messenger browser дотор ажиллахгүй</h1>
         <p>
-          Chrome/Safari дээр нээгээд цагаа хэмжээрэй
-        </p>
-        <a class="btn btn-accent external-browser-link" href="${escapeHtml(
-          getExternalBrowserHref(),
-        )}" target="_blank" rel="noreferrer">Chrome/Safari дээр нээх</a>
-        <p>
-          Хэрвээ товч ажиллахгүй бол доорх URL-г copy хийгээд Chrome эсвэл
-          Safari дээр paste хийж нээгээрэй.
+          Chrome/Safari дээр нээгээд цагаа хэмжээрэй ⬇️
         </p>
         <p class="external-browser-url">${escapeHtml(window.location.href)}</p>
       </section>
