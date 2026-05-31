@@ -12,7 +12,7 @@ import { TbTrash } from "react-icons/tb";
 const STORAGE_KEY = "werun-stopwatch-state-v1";
 const THEME_STORAGE_KEY = "werun-theme-v1";
 const DISPLAY_INTERVAL_MS = 43;
-const DEFAULT_LAP_COMMENT = "X";
+const DEFAULT_LAP_COMMENT = "";
 
 function defaultState() {
   return {
@@ -35,6 +35,19 @@ function formatTime(ms) {
   const ss = String(seconds).padStart(2, "0");
 
   return `${hh}:${mm}:${ss}`;
+}
+
+function formatExportElapsedTime(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+
+  return `${hours}:${mm}:${ss}`;
 }
 
 function formatRecordedAt(date) {
@@ -62,8 +75,14 @@ function getElapsedTime(state, now = Date.now()) {
 }
 
 function normalizeLapComment(comment) {
-  const trimmedComment = String(comment ?? "").trim();
-  return trimmedComment || DEFAULT_LAP_COMMENT;
+  return String(comment ?? "").trim();
+}
+
+function getExportComment(comment) {
+  const normalizedComment = normalizeLapComment(comment);
+  return normalizedComment === "X" || normalizedComment === "❌"
+    ? ""
+    : normalizedComment;
 }
 
 function loadState() {
@@ -103,14 +122,56 @@ function escapeCsvValue(value) {
   return stringValue;
 }
 
-function downloadFile(filename, content, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
+function triggerDownload(filename, blob) {
+  if (typeof document === "undefined" || typeof URL === "undefined") {
+    return "unavailable";
+  }
+
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+
+  window.setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+  return "downloaded";
+}
+
+async function exportFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const file =
+    typeof File === "function"
+      ? new File([blob], filename, { type: mimeType })
+      : null;
+
+  const canShareFile =
+    file &&
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    (typeof navigator.canShare !== "function" ||
+      navigator.canShare({ files: [file] }));
+
+  if (canShareFile) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename,
+      });
+      return "shared";
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return "cancelled";
+      }
+    }
+  }
+
+  return triggerDownload(filename, blob);
 }
 
 export default function StopwatchPage() {
@@ -119,12 +180,9 @@ export default function StopwatchPage() {
   const [theme, setTheme] = useState("light");
   const [lapSearchValue, setLapSearchValue] = useState("");
   const [activeLapSearch, setActiveLapSearch] = useState(null);
-  const [statusMessage, setStatusMessage] = useState(
-    "Session persistence enabled",
-  );
-  const [connectivityMessage, setConnectivityMessage] = useState(
-    "Checking connectivity",
-  );
+  const [statusMessage, setStatusMessage] = useState("odo zuger shu");
+  const [connectivityMessage, setConnectivityMessage] =
+    useState("suljecn unad bna");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
 
@@ -363,12 +421,15 @@ export default function StopwatchPage() {
       document.activeElement.blur();
     }
 
-    window.setTimeout(() => {
-      targetLap.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, dismissKeyboard ? 180 : 0);
+    window.setTimeout(
+      () => {
+        targetLap.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      },
+      dismissKeyboard ? 180 : 0,
+    );
 
     setActiveLapSearch(nextLapIndex);
     setStatusMessage(`Scrolled to lap ${nextLapIndex}`);
@@ -394,46 +455,55 @@ export default function StopwatchPage() {
     });
   }
 
-  function exportCsv() {
-    const header = "lap,total_time,split_time,recorded_at,comment";
+  async function exportCsv() {
+    const header = "Lap,Elapsed_time,Comment";
     const rows = appState.laps.map((lap) =>
       [
         lap.index,
-        formatTime(lap.elapsedMs),
-        formatTime(lap.splitMs),
-        lap.recordedAtLabel,
-        normalizeLapComment(lap.comment),
+        formatExportElapsedTime(lap.elapsedMs),
+        getExportComment(lap.comment),
       ]
         .map(escapeCsvValue)
         .join(","),
     );
 
-    downloadFile(
+    const result = await exportFile(
       "werun-stopwatch-laps.csv",
       [header, ...rows].join("\n"),
       "text/csv;charset=utf-8",
     );
+    setStatusMessage(
+      result === "shared"
+        ? "CSV shared"
+        : result === "cancelled"
+          ? "Export cancelled"
+          : "CSV export ready",
+    );
   }
 
-  function exportJson() {
-    downloadFile(
+  async function exportJson() {
+    const result = await exportFile(
       "werun-stopwatch-laps.json",
       JSON.stringify(
         {
           exportedAt: new Date().toISOString(),
-          totalElapsedMs: Math.round(elapsed),
-          state: {
-            ...appState,
-            laps: appState.laps.map((lap) => ({
-              ...lap,
-              comment: normalizeLapComment(lap.comment),
-            })),
-          },
+          laps: appState.laps.map((lap) => ({
+            Lap: lap.index,
+            Elapsed_time: formatExportElapsedTime(lap.elapsedMs),
+            Comment: getExportComment(lap.comment),
+          })),
         },
         null,
         2,
       ),
       "application/json;charset=utf-8",
+    );
+    setStatusMessage(
+      result === "shared"
+        ? "JSON shared"
+        : result === "cancelled"
+          ? "Export cancelled"
+          : "JSON export ready",
     );
   }
 

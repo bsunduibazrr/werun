@@ -1,6 +1,6 @@
 const STORAGE_KEY = "werun-stopwatch-state-v1";
 const DISPLAY_INTERVAL_MS = 43;
-const DEFAULT_LAP_COMMENT = "❌";
+const DEFAULT_LAP_COMMENT = "";
 
 const timeDisplay = document.getElementById("time-display");
 const statusDisplay = document.getElementById("status-display");
@@ -33,8 +33,14 @@ function defaultState() {
 }
 
 function normalizeLapComment(comment) {
-  const trimmedComment = String(comment ?? "").trim();
-  return trimmedComment || DEFAULT_LAP_COMMENT;
+  return String(comment ?? "").trim();
+}
+
+function getExportComment(comment) {
+  const normalizedComment = normalizeLapComment(comment);
+  return normalizedComment === "X" || normalizedComment === "❌"
+    ? ""
+    : normalizedComment;
 }
 
 function loadState() {
@@ -81,6 +87,19 @@ function formatTime(ms) {
   const cc = String(centiseconds).padStart(2, "0");
 
   return hours > 0 ? `${hh}:${mm}:${ss}.${cc}` : `${mm}:${ss}.${cc}`;
+}
+
+function formatExportElapsedTime(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+
+  return `${hours}:${mm}:${ss}`;
 }
 
 function getElapsedTime(now = Date.now()) {
@@ -154,8 +173,8 @@ function renderLaps() {
           <label class="lap-comment-field">
             <span class="sr-only">Lap ${lap.index} comment</span>
             <input class="lap-comment-input" type="text" value="${escapeHtml(
-              lap.comment ?? DEFAULT_LAP_COMMENT,
-            )}" placeholder="${DEFAULT_LAP_COMMENT}" />
+              lap.comment ?? "",
+            )}" placeholder="Comment" />
           </label>
           <button class="btn btn-danger lap-remove-btn" type="button" aria-label="Remove lap ${lap.index}" title="Remove lap">
             🗑️
@@ -287,54 +306,105 @@ function removeLap(lapIndex) {
   updateRestoreBadge(`Lap ${lapIndex} removed from official log`);
 }
 
-function downloadFile(filename, content, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
+function triggerDownload(filename, blob) {
+  if (typeof document === "undefined" || typeof URL === "undefined") {
+    return "unavailable";
+  }
+
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+
+  window.setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+  return "downloaded";
 }
 
-function exportCsv() {
-  const header = "lap,total_time,split_time,recorded_at,comment";
+async function exportFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const file =
+    typeof File === "function"
+      ? new File([blob], filename, { type: mimeType })
+      : null;
+
+  const canShareFile =
+    file &&
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    (typeof navigator.canShare !== "function" ||
+      navigator.canShare({ files: [file] }));
+
+  if (canShareFile) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename,
+      });
+      return "shared";
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return "cancelled";
+      }
+    }
+  }
+
+  return triggerDownload(filename, blob);
+}
+
+async function exportCsv() {
+  const header = "Lap,Elapsed_time,Comment";
   const rows = state.laps.map((lap) =>
     [
       lap.index,
-      formatTime(lap.elapsedMs),
-      formatTime(lap.splitMs),
-      lap.recordedAtLabel,
-      normalizeLapComment(lap.comment),
+      formatExportElapsedTime(lap.elapsedMs),
+      getExportComment(lap.comment),
     ]
       .map(escapeCsvValue)
       .join(","),
   );
 
-  downloadFile(
+  const result = await exportFile(
     "werun-stopwatch-laps.csv",
     [header, ...rows].join("\n"),
     "text/csv;charset=utf-8",
   );
+  updateRestoreBadge(
+    result === "shared"
+      ? "CSV shared"
+      : result === "cancelled"
+        ? "Export cancelled"
+        : "CSV export ready",
+  );
 }
 
-function exportJson() {
+async function exportJson() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    totalElapsedMs: Math.round(getElapsedTime()),
-    state: {
-      ...state,
-      laps: state.laps.map((lap) => ({
-        ...lap,
-        comment: normalizeLapComment(lap.comment),
-      })),
-    },
+    laps: state.laps.map((lap) => ({
+      Lap: lap.index,
+      Elapsed_time: formatExportElapsedTime(lap.elapsedMs),
+      Comment: getExportComment(lap.comment),
+    })),
   };
 
-  downloadFile(
+  const result = await exportFile(
     "werun-stopwatch-laps.json",
     JSON.stringify(payload, null, 2),
     "application/json;charset=utf-8",
+  );
+  updateRestoreBadge(
+    result === "shared"
+      ? "JSON shared"
+      : result === "cancelled"
+        ? "Export cancelled"
+        : "JSON export ready",
   );
 }
 
