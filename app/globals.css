@@ -237,6 +237,64 @@ h2 {
   font-weight: 600;
 }
 
+.export-warning {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 45, 45, 0.18);
+  border-radius: 12px;
+  background: color-mix(in srgb, #b42d2d 9%, var(--surface-strong));
+  color: #b42d2d;
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.external-browser-gate {
+  min-height: 100vh;
+  width: min(720px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0;
+  display: grid;
+  place-items: center;
+}
+
+.external-browser-panel {
+  width: 100%;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.external-browser-panel h1 {
+  max-width: 14ch;
+  margin-top: 10px;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+}
+
+.external-browser-panel p:not(.eyebrow) {
+  max-width: 48ch;
+  color: var(--text-soft);
+  line-height: 1.65;
+}
+
+.external-browser-link {
+  width: fit-content;
+  margin-top: 14px;
+  text-decoration: none;
+}
+
+.external-browser-url {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
 .controls,
 .utility-actions,
 .export-actions {

@@ -358,11 +358,58 @@ async function exportFile(filename, content, mimeType) {
   return triggerDownload(filename, blob);
 }
 
+function isInAppBrowser() {
+  const userAgent = navigator.userAgent || "";
+  return /FBAN|FBAV|FB_IAB|FB4A|FBIOS|MessengerForiOS|Instagram/i.test(
+    userAgent,
+  );
+}
+
+function getExternalBrowserHref() {
+  const currentUrl = window.location.href;
+  const userAgent = navigator.userAgent || "";
+
+  if (/Android/i.test(userAgent)) {
+    const url = new URL(currentUrl);
+    return `intent://${url.host}${url.pathname}${url.search}${url.hash}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;end`;
+  }
+
+  if (/iPhone|iPad|iPod/i.test(userAgent) && currentUrl.startsWith("https://")) {
+    return `googlechrome://${currentUrl.replace(/^https:\/\//, "")}`;
+  }
+
+  return currentUrl;
+}
+
+function renderExternalBrowserGate() {
+  document.body.innerHTML = `
+    <main class="external-browser-gate">
+      <section class="external-browser-panel">
+        <img class="brand-logo" src="./assets/logo.png" alt="WeRun logo" width="220" height="66" />
+        <p class="eyebrow">Browser шаардлагатай</p>
+        <h1>Messenger/Facebook browser дотор ажиллахгүй</h1>
+        <p>
+          CSV export найдвартай ажиллуулахын тулд дараах link-ээр
+          Chrome эсвэл Safari дээр нээгээд цагаа хэмжээрэй.
+        </p>
+        <a class="btn btn-accent external-browser-link" href="${escapeHtml(
+          getExternalBrowserHref(),
+        )}" target="_blank" rel="noreferrer">Chrome/Safari дээр нээх</a>
+        <p class="external-browser-url">${escapeHtml(window.location.href)}</p>
+      </section>
+    </main>
+  `;
+}
+
 async function exportCsv() {
-  const header = "Lap,Elapsed_time,Comment";
+  if (isInAppBrowser()) {
+    renderExternalBrowserGate();
+    return;
+  }
+
+  const header = "Elapsed time,Comment";
   const rows = state.laps.map((lap) =>
     [
-      lap.index,
       formatExportElapsedTime(lap.elapsedMs),
       getExportComment(lap.comment),
     ]
@@ -385,11 +432,15 @@ async function exportCsv() {
 }
 
 async function exportJson() {
+  if (isInAppBrowser()) {
+    renderExternalBrowserGate();
+    return;
+  }
+
   const payload = {
     exportedAt: new Date().toISOString(),
     laps: state.laps.map((lap) => ({
-      Lap: lap.index,
-      Elapsed_time: formatExportElapsedTime(lap.elapsedMs),
+      "Elapsed time": formatExportElapsedTime(lap.elapsedMs),
       Comment: getExportComment(lap.comment),
     })),
   };
@@ -538,43 +589,47 @@ function syncFromVisibilityChange() {
   }
 }
 
-startPauseButton.addEventListener("click", () => {
-  if (state.isRunning) {
-    pauseStopwatch();
-    return;
+if (isInAppBrowser()) {
+  renderExternalBrowserGate();
+} else {
+  startPauseButton.addEventListener("click", () => {
+    if (state.isRunning) {
+      pauseStopwatch();
+      return;
+    }
+
+    startStopwatch();
+  });
+
+  lapButton.addEventListener("click", addLap);
+  resetButton.addEventListener("click", resetStopwatch);
+  exportCsvButton.addEventListener("click", exportCsv);
+  exportJsonButton.addEventListener("click", exportJson);
+  fullscreenButton.addEventListener("click", () => {
+    toggleFullscreen().catch(() => {
+      updateRestoreBadge("Fullscreen unavailable");
+    });
+  });
+  wakeLockButton.addEventListener("click", () => {
+    toggleWakeLock().catch(() => {
+      updateRestoreBadge("Could not change wake lock");
+    });
+  });
+
+  document.addEventListener("fullscreenchange", syncFullscreenUi);
+  document.addEventListener("visibilitychange", syncFromVisibilityChange);
+  window.addEventListener("pageshow", updateDisplay);
+  window.addEventListener("beforeunload", persistState);
+  window.addEventListener("online", updateConnectivityBadge);
+  window.addEventListener("offline", updateConnectivityBadge);
+
+  refreshAll();
+  restoreRunningSessionIfNeeded();
+  updateConnectivityBadge();
+  syncFullscreenUi();
+  syncWakeLockUi();
+  if (state.wakeLockEnabled && document.visibilityState === "visible") {
+    requestWakeLock();
   }
-
-  startStopwatch();
-});
-
-lapButton.addEventListener("click", addLap);
-resetButton.addEventListener("click", resetStopwatch);
-exportCsvButton.addEventListener("click", exportCsv);
-exportJsonButton.addEventListener("click", exportJson);
-fullscreenButton.addEventListener("click", () => {
-  toggleFullscreen().catch(() => {
-    updateRestoreBadge("Fullscreen unavailable");
-  });
-});
-wakeLockButton.addEventListener("click", () => {
-  toggleWakeLock().catch(() => {
-    updateRestoreBadge("Could not change wake lock");
-  });
-});
-
-document.addEventListener("fullscreenchange", syncFullscreenUi);
-document.addEventListener("visibilitychange", syncFromVisibilityChange);
-window.addEventListener("pageshow", updateDisplay);
-window.addEventListener("beforeunload", persistState);
-window.addEventListener("online", updateConnectivityBadge);
-window.addEventListener("offline", updateConnectivityBadge);
-
-refreshAll();
-restoreRunningSessionIfNeeded();
-updateConnectivityBadge();
-syncFullscreenUi();
-syncWakeLockUi();
-if (state.wakeLockEnabled && document.visibilityState === "visible") {
-  requestWakeLock();
+  registerServiceWorker();
 }
-registerServiceWorker();

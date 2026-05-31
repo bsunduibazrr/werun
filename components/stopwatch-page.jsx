@@ -174,12 +174,46 @@ async function exportFile(filename, content, mimeType) {
   return triggerDownload(filename, blob);
 }
 
+function isInAppBrowser() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent || "";
+  return /FBAN|FBAV|FB_IAB|FB4A|FBIOS|MessengerForiOS|Instagram/i.test(
+    userAgent,
+  );
+}
+
+function getExternalBrowserHref() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const currentUrl = window.location.href;
+  const userAgent = navigator.userAgent || "";
+
+  if (/Android/i.test(userAgent)) {
+    const url = new URL(currentUrl);
+    return `intent://${url.host}${url.pathname}${url.search}${url.hash}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;end`;
+  }
+
+  if (/iPhone|iPad|iPod/i.test(userAgent) && currentUrl.startsWith("https://")) {
+    return `googlechrome://${currentUrl.replace(/^https:\/\//, "")}`;
+  }
+
+  return currentUrl;
+}
+
 export default function StopwatchPage() {
   const [appState, setAppState] = useState(defaultState);
   const [hydrated, setHydrated] = useState(false);
   const [theme, setTheme] = useState("light");
   const [lapSearchValue, setLapSearchValue] = useState("");
   const [activeLapSearch, setActiveLapSearch] = useState(null);
+  const [exportWarning, setExportWarning] = useState("");
+  const [inAppBrowserActive, setInAppBrowserActive] = useState(false);
+  const [externalBrowserHref, setExternalBrowserHref] = useState("");
   const [statusMessage, setStatusMessage] = useState("odo zuger shu");
   const [connectivityMessage, setConnectivityMessage] =
     useState("suljecn unad bna");
@@ -201,6 +235,8 @@ export default function StopwatchPage() {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     setAppState(restored);
     setTheme(savedTheme === "dark" ? "dark" : "light");
+    setInAppBrowserActive(isInAppBrowser());
+    setExternalBrowserHref(getExternalBrowserHref());
     setHydrated(true);
     setStatusMessage(
       restored.isRunning
@@ -456,10 +492,17 @@ export default function StopwatchPage() {
   }
 
   async function exportCsv() {
-    const header = "Lap,Elapsed_time,Comment";
+    if (inAppBrowserActive) {
+      const warning = "Please open this page in Chrome or Safari to export CSV.";
+      setExportWarning(warning);
+      setStatusMessage(warning);
+      return;
+    }
+
+    setExportWarning("");
+    const header = "Elapsed time,Comment";
     const rows = appState.laps.map((lap) =>
       [
-        lap.index,
         formatExportElapsedTime(lap.elapsedMs),
         getExportComment(lap.comment),
       ]
@@ -482,14 +525,21 @@ export default function StopwatchPage() {
   }
 
   async function exportJson() {
+    if (inAppBrowserActive) {
+      const warning = "Please open this page in Chrome or Safari to export CSV.";
+      setExportWarning(warning);
+      setStatusMessage(warning);
+      return;
+    }
+
+    setExportWarning("");
     const result = await exportFile(
       "werun-stopwatch-laps.json",
       JSON.stringify(
         {
           exportedAt: new Date().toISOString(),
           laps: appState.laps.map((lap) => ({
-            Lap: lap.index,
-            Elapsed_time: formatExportElapsedTime(lap.elapsedMs),
+            "Elapsed time": formatExportElapsedTime(lap.elapsedMs),
             Comment: getExportComment(lap.comment),
           })),
         },
@@ -548,6 +598,37 @@ export default function StopwatchPage() {
 
   function toggleTheme() {
     setTheme((current) => (current === "dark" ? "light" : "dark"));
+  }
+
+  if (hydrated && inAppBrowserActive) {
+    return (
+      <main className="external-browser-gate">
+        <section className="external-browser-panel">
+          <img
+            className="brand-logo"
+            src={theme === "dark" ? "/assets/logo-dark.png" : "/assets/logo.png"}
+            alt="WeRun logo"
+            width="220"
+            height="66"
+          />
+          <p className="eyebrow">Browser шаардлагатай</p>
+          <h1>Messenger/Facebook browser дотор ажиллахгүй</h1>
+          <p>
+            CSV export найдвартай ажиллуулахын тулд дараах link-ээр
+            Chrome эсвэл Safari дээр нээгээд цагаа хэмжээрэй.
+          </p>
+          <a
+            className="btn btn-accent external-browser-link"
+            href={externalBrowserHref}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Chrome/Safari дээр нээх
+          </a>
+          <p className="external-browser-url">{window.location.href}</p>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -670,6 +751,12 @@ export default function StopwatchPage() {
             Export Result
           </button>
         </div>
+
+        {exportWarning && (
+          <p className="export-warning" role="alert">
+            {exportWarning}
+          </p>
+        )}
       </section>
 
       <section className="laps-card">
