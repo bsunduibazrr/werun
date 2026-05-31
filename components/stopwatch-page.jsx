@@ -195,11 +195,7 @@ function getExternalBrowserHref() {
 
   if (/Android/i.test(userAgent)) {
     const url = new URL(currentUrl);
-    return `intent://${url.host}${url.pathname}${url.search}${url.hash}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;end`;
-  }
-
-  if (/iPhone|iPad|iPod/i.test(userAgent) && currentUrl.startsWith("https://")) {
-    return `googlechrome://${currentUrl.replace(/^https:\/\//, "")}`;
+    return `intent://${url.host}${url.pathname}${url.search}${url.hash}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
   }
 
   return currentUrl;
@@ -625,6 +621,10 @@ export default function StopwatchPage() {
           >
             Chrome/Safari дээр нээх
           </a>
+          <p>
+            Хэрвээ товч ажиллахгүй бол доорх URL-г copy хийгээд Chrome эсвэл
+            Safari дээр paste хийж нээгээрэй.
+          </p>
           <p className="external-browser-url">{window.location.href}</p>
         </section>
       </main>
